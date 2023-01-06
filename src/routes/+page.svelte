@@ -1,26 +1,18 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { getUrl } from '$lib/utils'
+	import { onMount } from 'svelte'
 
-	let url: string | undefined = undefined;
-
-	async function getUrl() {
-		const tabs = await chrome.tabs?.query({ active: true, currentWindow: true });
-		return tabs?.at(0)?.url;
-	}
+	let url: string | undefined = undefined
 
 	onMount(async () => {
-		if (import.meta.env.PROD) {
-			url = await getUrl();
-		} else {
-			url = window.location.href;
-		}
-	});
+		url = import.meta.env.DEV ? window.location.href : await getUrl()
+	})
 
-	console.log('this is a popup-window');
+	console.log('this is a popup-window')
 </script>
 
 <div id="popup-window" style="width: 400px;height: 500px">
-	<div class="url">{url}</div>
+	<div class="font-mono text-sm bg-amber-200 text-amber-600">{url}</div>
 </div>
 
 <style>
@@ -33,11 +25,5 @@
 		min-height: 150px;
 		resize: vertical;
 		overflow: auto;
-	}
-
-	.url {
-		font-size: 14px;
-		font-family: 'SF Mono', 'Roboto Mono', 'Fira Code', 'Fira Mono', 'Droid Sans Mono', 'Monaco',
-			monospace;
 	}
 </style>
