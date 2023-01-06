@@ -32,7 +32,7 @@
 
 	const protocols = ['http:', 'https:']
 
-	$: searchParams = url ? url.searchParams : undefined
+	$: searchParams = url ? url.searchParams : new URLSearchParams()
 
 	onMount(async () => {
 		initialHref = import.meta.env.DEV ? window.location.href : await getCurrentTabUrl()
@@ -51,7 +51,7 @@
 		updateUrl(newUrl)
 	}
 
-	function updateQueryValue(key: string, value: string) {
+	function setQueryParameter(key: string, value: string) {
 		if (!url) return
 
 		const newUrl = new URL(url.href)
@@ -61,11 +61,13 @@
 	}
 
 	function updateQueryKeyHandler(e: Event, oldKey: string) {
-		updateQueryKey((e.target as HTMLInputElement).value, oldKey)
+		const key = (e.target as HTMLInputElement).value
+		updateQueryKey(key, oldKey)
 	}
 
 	function updateQueryValueHandler(e: Event, key: string) {
-		updateQueryValue(key, (e.target as HTMLInputElement).value)
+		const value = (e.target as HTMLInputElement).value
+		setQueryParameter(key, value)
 	}
 
 	function handleProtocolChange(e: Event & { detail: string }) {
@@ -73,14 +75,30 @@
 		url.protocol = e.detail
 	}
 
-	// $: console.log(url)
-
 	let newParam = {
 		key: '',
 		value: '',
 	}
 
-	// key=value?&key2=value2
+	function clearNewParam() {
+		newParam.key = ''
+		newParam.value = ''
+	}
+
+	function addQueryParam(e: Event) {
+		setQueryParameter(newParam.key, newParam.value)
+		clearNewParam()
+	}
+
+	let keys: HTMLInputElement[] = []
+
+	$: {
+		// TODO: how to recognize is new has just been added?
+		// this allows adding new but breaks editing existing
+		const last = keys.at(-1)
+		console.log(last?.value)
+		last?.focus()
+	}
 </script>
 
 <main>
@@ -119,7 +137,7 @@
 							</RadioGroupLabel>
 							<div class="flex items-center">
 								{#each protocols as protocol}
-									<RadioGroupOption value={protocol} let:checked>
+									<RadioGroupOption bind:value={protocol} let:checked>
 										<p
 											class="cursor-default bg-gray-100 px-4 leading-8 hover:bg-sky-100"
 											class:checked
@@ -132,66 +150,64 @@
 						</RadioGroup>
 					</div>
 
-					{#if searchParams}
-						<div class="flex items-center justify-between gap-2">
-							<Label>Query Params</Label>
-							<button
-								on:click={sortQueryParams}
-								class="flex items-center justify-center gap-2 bg-gray-100 px-1 py-1 text-xs font-medium uppercase"
-							>
-								Sort
-								<Icon icon="mdi:sort-ascending" class="text-sm text-gray-900" />
-							</button>
-						</div>
-						<table class="!mt-2 w-full">
-							<thead class="w-full">
-								<tr class="grid grid-cols-3 items-center text-left">
-									<th class="bg-gray-100 px-2 leading-8">
-										<Label>Key</Label>
-									</th>
-									<th class="col-span-2 bg-gray-100 px-2 leading-8">
-										<Label>Value</Label>
-									</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each [...searchParams] as [key, value]}
-									<tr class="grid grid-cols-3">
-										<td class="p-0">
-											<input
-												class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
-												value={key}
-												on:input={(e) => updateQueryKeyHandler(e, key)}
-											/>
-										</td>
-										<td class="col-span-2 p-0">
-											<input
-												class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
-												{value}
-												on:input={(e) => updateQueryValueHandler(e, key)}
-											/>
-										</td>
-									</tr>
-								{/each}
-								<!-- <tr class="grid grid-cols-3">
-									<td class="p-0">
+					<div class="flex items-center justify-between gap-2">
+						<Label>Query Params</Label>
+						<button
+							on:click={sortQueryParams}
+							class="flex items-center justify-center gap-2 bg-gray-100 px-1 py-1 text-xs font-medium uppercase"
+						>
+							Sort
+							<Icon icon="mdi:sort-ascending" class="text-sm text-gray-900" />
+						</button>
+					</div>
+					<table class="!mt-2 w-full">
+						<thead class="w-full">
+							<tr class="grid grid-cols-3 items-center text-left">
+								<th class="bg-gray-100 px-2 leading-8">
+									<Label>Key</Label>
+								</th>
+								<th class="col-span-2 bg-gray-100 px-2 leading-8">
+									<Label>Value</Label>
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each [...searchParams] as [key, value], i}
+								<tr class="grid grid-cols-3">
+									<td class="bg-gray-100 p-0">
 										<input
+											bind:this={keys[i]}
 											class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
-											bind:value={newParam.key}
-											on:input={(e) => handleQueryKeySet(newParam.key)}
+											value={key}
+											on:input={(e) => updateQueryKeyHandler(e, key)}
 										/>
 									</td>
 									<td class="col-span-2 p-0">
 										<input
 											class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
-											bind:value={newParam.value}
-											on:input={(e) => handleQueryParamSet(newParam.key, newParam.value)}
+											{value}
+											on:input={(e) => updateQueryValueHandler(e, key)}
 										/>
 									</td>
-								</tr> -->
-							</tbody>
-						</table>
-					{/if}
+								</tr>
+							{/each}
+							<tr class="grid grid-cols-3">
+								<td class="p-0">
+									<input
+										class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
+										bind:value={newParam.key}
+										on:input={(e) => addQueryParam(e)}
+									/>
+								</td>
+								<td class="col-span-2 p-0">
+									<input
+										class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
+										bind:value={newParam.value}
+									/>
+								</td>
+							</tr>
+						</tbody>
+					</table>
 				</div>
 
 				<div class="flex">
