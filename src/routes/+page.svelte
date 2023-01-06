@@ -19,6 +19,7 @@
 	function sortQueryParams() {
 		if (!url) return
 		url?.searchParams.sort()
+		updateUrl(url)
 	}
 
 	let initialHref: string | undefined
@@ -69,10 +70,35 @@
 
 	$: console.log(url)
 
-	function setQueryParameter(key: string, value: string) {
+	function setQueryParameter(key: string, value: string, index: number) {
 		if (!url) return
 
-		url.searchParams.set(key, value)
+		const all = url.searchParams.getAll(key)
+		console.log(all)
+
+		if (url.searchParams.has(key)) {
+			const _params: Param[] = []
+
+			// fill _params with all searchParams
+			url.searchParams.forEach((value, key) => {
+				_params.push({ key, value })
+			})
+
+			if (_params.at(index)) {
+				_params.at(index)!.value = value
+			}
+
+			// delete all search params
+			_params.forEach(({ key }) => url?.searchParams.delete(key))
+
+			// fill searchParam with updated value
+			_params.forEach(({ key, value }) => {
+				url?.searchParams.append(key, value)
+			})
+		} else {
+			url.searchParams.set(key, value)
+		}
+
 		updateUrl(url)
 	}
 
@@ -81,9 +107,9 @@
 		updateQueryKey(key, oldKey)
 	}
 
-	function updateQueryValueHandler(e: Event, key: string) {
+	function updateQueryValueHandler(e: Event, key: string, index: number) {
 		const value = (e.target as HTMLInputElement).value
-		setQueryParameter(key, value)
+		setQueryParameter(key, value, index)
 	}
 
 	function handleProtocolChange(e: Event & { detail: string }) {
@@ -91,7 +117,41 @@
 		url.protocol = e.detail
 	}
 
+	$: {
+		if (url && url.searchParams.has('') && url.searchParams.get('') === '') {
+			url.searchParams.delete('')
+			updateUrl(url)
+		}
+	}
+
+	function addQueryParam() {
+		if (!url) return
+
+		if (!newParam.key) {
+			return
+		}
+
+		url.searchParams.append(newParam.key, newParam.value)
+		clearNewParam()
+
+		updateUrl(url)
+	}
+
 	let keys: HTMLInputElement[] = []
+
+	$: {
+		keys.at(-1)?.focus()
+	}
+
+	let newParam: Param = {
+		key: '',
+		value: '',
+	}
+
+	function clearNewParam() {
+		newParam.key = ''
+		newParam.value = ''
+	}
 </script>
 
 <main>
@@ -180,12 +240,12 @@
 										<input
 											class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
 											{value}
-											on:input={(e) => updateQueryValueHandler(e, key)}
+											on:input={(e) => updateQueryValueHandler(e, key, i)}
 										/>
 									</td>
 								</tr>
 							{/each}
-							<!-- <tr class="grid grid-cols-3">
+							<tr class="grid grid-cols-3">
 								<td class="p-0">
 									<input
 										class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
@@ -199,7 +259,7 @@
 										bind:value={newParam.value}
 									/>
 								</td>
-							</tr> -->
+							</tr>
 						</tbody>
 					</table>
 				</div>
