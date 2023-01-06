@@ -16,15 +16,9 @@
 		url = new URL(initialHref)
 	}
 
-	function updateUrl(newUrl: URL | undefined) {
-		if (!newUrl) return
-		url = new URL(newUrl)
-	}
-
 	function sortQueryParams() {
 		if (!url) return
 		url?.searchParams.sort()
-		updateUrl(url)
 	}
 
 	let initialHref: string | undefined
@@ -32,32 +26,54 @@
 
 	const protocols = ['http:', 'https:']
 
-	$: searchParams = url ? url.searchParams : new URLSearchParams()
+	type Param = {
+		key: string
+		value: string
+	}
 
 	onMount(async () => {
 		initialHref = import.meta.env.DEV ? window.location.href : await getCurrentTabUrl()
 		setInitialUrl()
 	})
 
+	function updateUrl(_url: URL) {
+		url = new URL(_url.href)
+	}
+
 	function updateQueryKey(key: string, oldKey: string) {
 		if (!url) return
 
-		const newUrl = new URL(url.href)
+		const _params: Param[] = []
 
-		const value = newUrl.searchParams.get(oldKey) ?? ''
-		newUrl.searchParams.delete(oldKey)
-		newUrl.searchParams.set(key, value)
+		// fill _params with all searchParams
+		url.searchParams.forEach((value, key) => {
+			_params.push({ key, value })
+		})
 
-		updateUrl(newUrl)
+		// delete all search params
+		_params.forEach(({ key }) => url?.searchParams.delete(key))
+
+		// find param to replace in local array
+		const found = _params.findIndex((param) => param.key === oldKey)
+		if (found !== -1) {
+			_params[found].key = key
+		}
+
+		// fill searchParam with updated value
+		_params.forEach(({ key, value }) => {
+			url?.searchParams.append(key, value)
+		})
+
+		updateUrl(url)
 	}
+
+	$: console.log(url)
 
 	function setQueryParameter(key: string, value: string) {
 		if (!url) return
 
-		const newUrl = new URL(url.href)
-		newUrl.searchParams.set(key, value)
-
-		updateUrl(newUrl)
+		url.searchParams.set(key, value)
+		updateUrl(url)
 	}
 
 	function updateQueryKeyHandler(e: Event, oldKey: string) {
@@ -75,30 +91,7 @@
 		url.protocol = e.detail
 	}
 
-	let newParam = {
-		key: '',
-		value: '',
-	}
-
-	function clearNewParam() {
-		newParam.key = ''
-		newParam.value = ''
-	}
-
-	function addQueryParam(e: Event) {
-		setQueryParameter(newParam.key, newParam.value)
-		clearNewParam()
-	}
-
 	let keys: HTMLInputElement[] = []
-
-	$: {
-		// TODO: how to recognize is new has just been added?
-		// this allows adding new but breaks editing existing
-		const last = keys.at(-1)
-		console.log(last?.value)
-		last?.focus()
-	}
 </script>
 
 <main>
@@ -150,6 +143,7 @@
 						</RadioGroup>
 					</div>
 
+					<!-- {JSON.stringify(url.searchParams)} -->
 					<div class="flex items-center justify-between gap-2">
 						<Label>Query Params</Label>
 						<button
@@ -172,7 +166,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each [...searchParams] as [key, value], i}
+							{#each [...url.searchParams] as [key, value], i (i)}
 								<tr class="grid grid-cols-3">
 									<td class="bg-gray-100 p-0">
 										<input
@@ -191,7 +185,7 @@
 									</td>
 								</tr>
 							{/each}
-							<tr class="grid grid-cols-3">
+							<!-- <tr class="grid grid-cols-3">
 								<td class="p-0">
 									<input
 										class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
@@ -205,7 +199,7 @@
 										bind:value={newParam.value}
 									/>
 								</td>
-							</tr>
+							</tr> -->
 						</tbody>
 					</table>
 				</div>
