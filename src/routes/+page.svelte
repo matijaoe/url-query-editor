@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte'
 	import Label from '$lib/components/Label.svelte'
 	import ValueInput from '$lib/components/ValueInput.svelte'
 	import { getCurrentTabUrl, navigateTo } from '$lib/utils'
@@ -10,9 +11,20 @@
 		navigateTo(url.href ?? '')
 	}
 
-	function setUrl() {
+	function setInitialUrl() {
 		if (!initialHref) return
 		url = new URL(initialHref)
+	}
+
+	function updateUrl(newUrl: URL | undefined) {
+		if (!newUrl) return
+		url = new URL(newUrl)
+	}
+
+	function sortQueryParams() {
+		if (!url) return
+		url?.searchParams.sort()
+		updateUrl(url)
 	}
 
 	let initialHref: string | undefined
@@ -24,23 +36,51 @@
 
 	onMount(async () => {
 		initialHref = import.meta.env.DEV ? window.location.href : await getCurrentTabUrl()
-		setUrl()
+		setInitialUrl()
 	})
 
-	function handleQueryParamChange(e: InputEvent, key: string) {
-		const value = (e.target as HTMLInputElement).value
-
+	function updateQueryKey(key: string, oldKey: string) {
 		if (!url) return
 
-		const newUrl = new URL(url.href ?? '')
+		const newUrl = new URL(url.href)
+
+		const value = newUrl.searchParams.get(oldKey) ?? ''
+		newUrl.searchParams.delete(oldKey)
 		newUrl.searchParams.set(key, value)
-		url = newUrl
+
+		updateUrl(newUrl)
+	}
+
+	function updateQueryValue(key: string, value: string) {
+		if (!url) return
+
+		const newUrl = new URL(url.href)
+		newUrl.searchParams.set(key, value)
+
+		updateUrl(newUrl)
+	}
+
+	function updateQueryKeyHandler(e: Event, oldKey: string) {
+		updateQueryKey((e.target as HTMLInputElement).value, oldKey)
+	}
+
+	function updateQueryValueHandler(e: Event, key: string) {
+		updateQueryValue(key, (e.target as HTMLInputElement).value)
 	}
 
 	function handleProtocolChange(e: Event & { detail: string }) {
 		if (!url) return
 		url.protocol = e.detail
 	}
+
+	// $: console.log(url)
+
+	let newParam = {
+		key: '',
+		value: '',
+	}
+
+	// key=value?&key2=value2
 </script>
 
 <main>
@@ -50,7 +90,7 @@
 				<textarea
 					rows="2"
 					bind:value={url.href}
-					class="w-full break-all p-2 font-mono bg-gray-100 input-borders"
+					class="input-borders w-full break-all bg-gray-100 p-2 font-mono"
 				/>
 
 				<div class="space-y-4 p-3">
@@ -61,8 +101,10 @@
 						<Label>Hostname</Label>
 						<ValueInput bind:value={url.hostname} />
 
-						<Label>Port</Label>
-						<ValueInput type="number" min="1" max="65535" bind:value={url.port} />
+						{#if url.port || new URL(initialHref ?? '').port}
+							<Label>Port</Label>
+							<ValueInput type="number" min="1" max="65535" bind:value={url.port} />
+						{/if}
 
 						<Label>Search</Label>
 						<ValueInput bind:value={url.search} />
@@ -79,7 +121,7 @@
 								{#each protocols as protocol}
 									<RadioGroupOption value={protocol} let:checked>
 										<p
-											class="cursor-default px-4 leading-8 bg-gray-100 hover:bg-sky-100"
+											class="cursor-default bg-gray-100 px-4 leading-8 hover:bg-sky-100"
 											class:checked
 										>
 											{protocol}
@@ -91,14 +133,23 @@
 					</div>
 
 					{#if searchParams}
-						<Label>Query Params</Label>
-						<table class="w-full !mt-2">
+						<div class="flex items-center justify-between gap-2">
+							<Label>Query Params</Label>
+							<button
+								on:click={sortQueryParams}
+								class="flex items-center justify-center gap-2 bg-gray-100 px-1 py-1 text-xs font-medium uppercase"
+							>
+								Sort
+								<Icon icon="mdi:sort-ascending" class="text-sm text-gray-900" />
+							</button>
+						</div>
+						<table class="!mt-2 w-full">
 							<thead class="w-full">
-								<tr class="grid grid-cols-3 text-left items-center">
-									<th class="leading-8 bg-gray-100 px-2">
+								<tr class="grid grid-cols-3 items-center text-left">
+									<th class="bg-gray-100 px-2 leading-8">
 										<Label>Key</Label>
 									</th>
-									<th class="col-span-2 leading-8 bg-gray-100 px-2">
+									<th class="col-span-2 bg-gray-100 px-2 leading-8">
 										<Label>Value</Label>
 									</th>
 								</tr>
@@ -108,18 +159,36 @@
 									<tr class="grid grid-cols-3">
 										<td class="p-0">
 											<input
-												class="font-mono px-2 leading-8 bg-gray-100 col-span-2 w-full rounded-none input-borders"
-												bind:value={key}
+												class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
+												value={key}
+												on:input={(e) => updateQueryKeyHandler(e, key)}
 											/>
 										</td>
 										<td class="col-span-2 p-0">
 											<input
-												class="font-mono px-2 leading-8 bg-gray-100 col-span-2 w-full rounded-none input-borders"
-												on:input={(e) => handleQueryParamChange(e, key)}
+												class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
+												{value}
+												on:input={(e) => updateQueryValueHandler(e, key)}
 											/>
 										</td>
 									</tr>
 								{/each}
+								<!-- <tr class="grid grid-cols-3">
+									<td class="p-0">
+										<input
+											class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
+											bind:value={newParam.key}
+											on:input={(e) => handleQueryKeySet(newParam.key)}
+										/>
+									</td>
+									<td class="col-span-2 p-0">
+										<input
+											class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
+											bind:value={newParam.value}
+											on:input={(e) => handleQueryParamSet(newParam.key, newParam.value)}
+										/>
+									</td>
+								</tr> -->
 							</tbody>
 						</table>
 					{/if}
@@ -127,14 +196,14 @@
 
 				<div class="flex">
 					<button
-						class="w-full py-3 px-8 bg-sky-500 text-white flex-2 uppercase text-sm font-semibold"
+						class="flex-2 w-full bg-sky-500 py-3 px-8 text-sm font-semibold uppercase text-white"
 						type="submit"
 					>
 						Load page
 					</button>
 					<button
-						class="w-full py-3 px-8 bg-gray-800 text-gray-50 flex-1 uppercase text-sm font-semibold"
-						on:click={setUrl}
+						class="w-full flex-1 bg-gray-800 py-3 px-8 text-sm font-semibold uppercase text-gray-50"
+						on:click={setInitialUrl}
 						type="button"
 					>
 						Reset
@@ -162,6 +231,6 @@
 	}
 
 	:global(.input-borders) {
-		@apply border border-transparent focus:outline-none focus:border-sky-500 focus:bg-gray-100 invalid:bg-red-50 invalid:!border-red-500 read-only:!bg-gray-100;
+		@apply border border-transparent invalid:!border-red-500 invalid:bg-red-50 read-only:!bg-gray-100 focus:border-sky-500 focus:bg-gray-100 focus:outline-none;
 	}
 </style>
