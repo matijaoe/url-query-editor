@@ -41,60 +41,36 @@
 		url = new URL(_url.href)
 	}
 
-	function updateQueryKey(key: string, oldKey: string) {
+	function updateQueryKey(key: string, index: number) {
 		if (!url) return
 
-		const _params: Param[] = []
+		const entries: KeyValueTuple[] = Array.from(url.searchParams)
 
-		// fill _params with all searchParams
-		url.searchParams.forEach((value, key) => {
-			_params.push({ key, value })
-		})
+		deleteAllSearchParams(entries)
 
-		// delete all search params
-		_params.forEach(({ key }) => url?.searchParams.delete(key))
-
-		// find param to replace in local array
-		const found = _params.findIndex((param) => param.key === oldKey)
-		if (found !== -1) {
-			_params[found].key = key
+		if (entries.at(index)) {
+			entries.at(index)![0] = key
 		}
 
-		// fill searchParam with updated value
-		_params.forEach(({ key, value }) => {
-			url?.searchParams.append(key, value)
-		})
+		refillSearchParams(entries)
 
 		updateUrl(url)
 	}
 
-	$: console.log(url)
+	type KeyValueTuple = [string, string]
 
 	function setQueryParameter(key: string, value: string, index: number) {
 		if (!url) return
 
-		const all = url.searchParams.getAll(key)
-		console.log(all)
-
 		if (url.searchParams.has(key)) {
-			const _params: Param[] = []
+			const entries: KeyValueTuple[] = Array.from(url.searchParams)
 
-			// fill _params with all searchParams
-			url.searchParams.forEach((value, key) => {
-				_params.push({ key, value })
-			})
-
-			if (_params.at(index)) {
-				_params.at(index)!.value = value
+			if (entries.at(index)) {
+				entries.at(index)![1] = value
 			}
 
-			// delete all search params
-			_params.forEach(({ key }) => url?.searchParams.delete(key))
-
-			// fill searchParam with updated value
-			_params.forEach(({ key, value }) => {
-				url?.searchParams.append(key, value)
-			})
+			deleteAllSearchParams(entries)
+			refillSearchParams(entries)
 		} else {
 			url.searchParams.set(key, value)
 		}
@@ -102,9 +78,19 @@
 		updateUrl(url)
 	}
 
-	function updateQueryKeyHandler(e: Event, oldKey: string) {
+	function deleteAllSearchParams(entries: KeyValueTuple[]) {
+		entries.forEach(([key]) => url?.searchParams.delete(key))
+	}
+
+	function refillSearchParams(entries: KeyValueTuple[]) {
+		entries.forEach(([key, value]) => {
+			url?.searchParams.append(key, value)
+		})
+	}
+
+	function updateQueryKeyHandler(e: Event, index: number) {
 		const key = (e.target as HTMLInputElement).value
-		updateQueryKey(key, oldKey)
+		updateQueryKey(key, index)
 	}
 
 	function updateQueryValueHandler(e: Event, key: string, index: number) {
@@ -126,21 +112,32 @@
 
 	function addQueryParam() {
 		if (!url) return
-
-		if (!newParam.key) {
-			return
-		}
+		if (!newParam.key) return
 
 		url.searchParams.append(newParam.key, newParam.value)
+
 		clearNewParam()
 
 		updateUrl(url)
+
+		setTimeout(() => {
+			if (!url) return
+			const el = document.querySelector<HTMLInputElement>(
+				`#query-key-input-${Array.from(url.searchParams).length - 1}`
+			)
+			el?.focus()
+		}, 0)
 	}
 
-	let keys: HTMLInputElement[] = []
+	function deleteQuery(key: string, index: number) {
+		if (!url) return
+		const entries: KeyValueTuple[] = Array.from(url.searchParams)
 
-	$: {
-		keys.at(-1)?.focus()
+		deleteAllSearchParams(entries)
+		entries.splice(index, 1)
+		refillSearchParams(entries)
+
+		updateUrl(url)
 	}
 
 	let newParam: Param = {
@@ -216,7 +213,7 @@
 					</div>
 					<table class="!mt-2 w-full">
 						<thead class="w-full">
-							<tr class="grid grid-cols-3 items-center text-left">
+							<tr class="mb-1 grid grid-cols-3 items-center text-left">
 								<th class="bg-gray-100 px-2 leading-8">
 									<Label>Key</Label>
 								</th>
@@ -227,21 +224,30 @@
 						</thead>
 						<tbody>
 							{#each [...url.searchParams] as [key, value], i (i)}
-								<tr class="grid grid-cols-3">
+								<tr class="mb-1 grid grid-cols-3">
 									<td class="bg-gray-100 p-0">
 										<input
-											bind:this={keys[i]}
+											id={`query-key-input-${i}`}
 											class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
 											value={key}
-											on:input={(e) => updateQueryKeyHandler(e, key)}
+											on:input={(e) => updateQueryKeyHandler(e, i)}
 										/>
 									</td>
-									<td class="col-span-2 p-0">
+									<td class="col-span-2 flex items-center p-0">
 										<input
 											class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
 											{value}
 											on:input={(e) => updateQueryValueHandler(e, key, i)}
 										/>
+										<div class="h-full bg-gray-100">
+											<button
+												on:click={() => deleteQuery(key, i)}
+												type="button"
+												class=" mr-1 flex aspect-square h-full items-center justify-center px-2 text-gray-900 hover:bg-red-500 hover:text-white"
+											>
+												<Icon icon="tabler:x" />
+											</button>
+										</div>
 									</td>
 								</tr>
 							{/each}
