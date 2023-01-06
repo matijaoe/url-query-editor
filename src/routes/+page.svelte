@@ -206,6 +206,7 @@
 						<button
 							on:click={sortQueryParams}
 							class="flex items-center justify-center gap-2 bg-gray-100 px-1 py-1 text-xs font-medium uppercase"
+							type="button"
 						>
 							Sort
 							<Icon icon="mdi:sort-ascending" class="text-sm text-gray-900" />
