@@ -1,4 +1,12 @@
-# create-svelte
+# URL Editor
+
+Chrome extension, built with SvelteKit and Tailwind
+
+    🚧 Work in progress
+    
+    
+<img width="419" alt="CleanShot 2023-01-07 at 18 14 58@2x" src="https://user-images.githubusercontent.com/46557266/211162600-cdfdbaa2-1cc1-484c-ae89-74fc2a2ed3fd.png">
+
 
 Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
 
