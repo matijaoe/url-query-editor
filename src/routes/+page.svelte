@@ -185,7 +185,7 @@
 			<form on:submit|preventDefault={navigateToBuiltUrl}>
 				<textarea
 					placeholder="Full URL"
-					rows="3"
+					rows="1"
 					bind:value={url.href}
 					class="input-borders min-h-[68px] w-full break-all bg-gray-100 p-3 font-mono"
 				/>
