@@ -184,6 +184,7 @@
 		{#if url}
 			<form on:submit|preventDefault={navigateToBuiltUrl}>
 				<textarea
+					placeholder="Full URL"
 					rows="3"
 					bind:value={url.href}
 					class="input-borders min-h-[68px] w-full break-all bg-gray-100 p-3 font-mono"
@@ -348,16 +349,16 @@
 					<button
 						class="flex flex-1 items-center justify-center gap-2 bg-teal-500 py-3 px-6 pr-6 text-sm font-semibold uppercase text-white"
 						type="submit"
-						title="Load page with new url"
+						title="Reload page with new URL applied"
 					>
-						Go to url
+						Go to URL
 						<Icon icon="ic:outline-open-in-browser" class="text-lg" />
 					</button>
 					<button
 						class="flex items-center justify-center gap-2 bg-teal-700 py-3 px-6 text-sm font-semibold uppercase text-gray-50"
 						on:click={copyUrlToClipboard}
 						type="button"
-						title="Copy url to clipboard"
+						title="Copy URL to clipboard"
 					>
 						Copy
 						<Icon icon="ic:outline-link" class="text-lg" />
