@@ -1,4 +1,5 @@
 <script lang="ts">
+	import FieldButton from '$lib/components/FieldButton.svelte'
 	import Icon from '$lib/components/Icon.svelte'
 	import Label from '$lib/components/Label.svelte'
 	import ValueInput from '$lib/components/ValueInput.svelte'
@@ -46,7 +47,7 @@
 
 		const entries: KeyValueTuple[] = Array.from(url.searchParams)
 
-		deleteAllSearchParams(entries)
+		deleteAllSearchParams()
 
 		if (entries.at(index)) {
 			entries.at(index)![0] = key
@@ -69,7 +70,7 @@
 				entries.at(index)![1] = value
 			}
 
-			deleteAllSearchParams(entries)
+			deleteAllSearchParams()
 			refillSearchParams(entries)
 		} else {
 			url.searchParams.set(key, value)
@@ -78,8 +79,10 @@
 		updateUrl(url)
 	}
 
-	function deleteAllSearchParams(entries: KeyValueTuple[]) {
-		entries.forEach(([key]) => url?.searchParams.delete(key))
+	function deleteAllSearchParams() {
+		if (!url) return
+		url.search = ''
+		updateUrl(url)
 	}
 
 	function refillSearchParams(entries: KeyValueTuple[]) {
@@ -133,7 +136,7 @@
 		if (!url) return
 		const entries: KeyValueTuple[] = Array.from(url.searchParams)
 
-		deleteAllSearchParams(entries)
+		deleteAllSearchParams()
 		entries.splice(index, 1)
 		refillSearchParams(entries)
 
@@ -158,14 +161,33 @@
 				<textarea
 					rows="2"
 					bind:value={url.href}
-					class="input-borders w-full break-all bg-gray-100 p-2 font-mono"
+					class="input-borders min-h-[68px] w-full break-all bg-gray-100 p-2 font-mono"
 				/>
 
-				<div class="space-y-4 p-3">
-					<div class="grid grid-cols-[100px_1fr] items-center gap-1">
-						<Label>Origin</Label>
-						<ValueInput readonly bind:value={url.origin} />
+				<div class="space-y-1 p-3">
+					<RadioGroup
+						value={url.protocol}
+						on:change={handleProtocolChange}
+						class="grid grid-cols-[80px_1fr] items-center gap-x-4 gap-y-1 "
+					>
+						<RadioGroupLabel>
+							<Label>Protocol</Label>
+						</RadioGroupLabel>
+						<div class="flex items-center font-mono">
+							{#each protocols as protocol}
+								<RadioGroupOption bind:value={protocol} let:checked>
+									<p
+										class="cursor-pointer border border-transparent bg-gray-100 px-3 leading-8 hover:bg-sky-100"
+										class:checked
+									>
+										{protocol}
+									</p>
+								</RadioGroupOption>
+							{/each}
+						</div>
+					</RadioGroup>
 
+					<div class="grid grid-cols-[80px_1fr] items-center gap-x-4 gap-y-1">
 						<Label>Hostname</Label>
 						<ValueInput bind:value={url.hostname} />
 
@@ -173,102 +195,85 @@
 							<Label>Port</Label>
 							<ValueInput type="number" min="1" max="65535" bind:value={url.port} />
 						{/if}
+					</div>
 
-						<Label>Search</Label>
-						<ValueInput bind:value={url.search} />
+					<div class="pt-2">
+						<div class="flex items-center justify-between gap-2">
+							<Label>Query Params</Label>
 
-						<RadioGroup
-							value={url.protocol}
-							on:change={handleProtocolChange}
-							class="grid grid-cols-[100px_1fr] items-center gap-1"
-						>
-							<RadioGroupLabel>
-								<Label>Protocol</Label>
-							</RadioGroupLabel>
-							<div class="flex items-center">
-								{#each protocols as protocol}
-									<RadioGroupOption bind:value={protocol} let:checked>
-										<p
-											class="cursor-default bg-gray-100 px-4 leading-8 hover:bg-sky-100"
-											class:checked
-										>
-											{protocol}
-										</p>
-									</RadioGroupOption>
-								{/each}
+							<div class="flex justify-end gap-1">
+								{#if Array.from(url.searchParams ?? []).length > 0}
+									<FieldButton on:click={deleteAllSearchParams} icon="ic:sharp-delete-sweep">
+										Clear
+									</FieldButton>
+								{/if}
+
+								<FieldButton on:click={sortQueryParams} icon="ic:sharp-sort-by-alpha">
+									Sort
+								</FieldButton>
 							</div>
-						</RadioGroup>
-					</div>
+						</div>
 
-					<!-- {JSON.stringify(url.searchParams)} -->
-					<div class="flex items-center justify-between gap-2">
-						<Label>Query Params</Label>
-						<button
-							on:click={sortQueryParams}
-							class="flex items-center justify-center gap-2 bg-gray-100 px-1 py-1 text-xs font-medium uppercase"
-							type="button"
-						>
-							Sort
-							<Icon icon="mdi:sort-ascending" class="text-sm text-gray-900" />
-						</button>
-					</div>
-					<table class="!mt-2 w-full">
-						<thead class="w-full">
-							<tr class="mb-1 grid grid-cols-3 items-center text-left">
-								<th class="bg-gray-100 px-2 leading-8">
-									<Label>Key</Label>
-								</th>
-								<th class="col-span-2 bg-gray-100 px-2 leading-8">
-									<Label>Value</Label>
-								</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each [...url.searchParams] as [key, value], i (i)}
-								<tr class="mb-1 grid grid-cols-3">
-									<td class="bg-gray-100 p-0">
+						<table>
+							<thead>
+								<tr class="grid grid-cols-3 items-center text-left">
+									<th class="bg-gray-100 px-2 leading-8">
+										<Label>Key</Label>
+									</th>
+									<th class="col-span-2 bg-gray-100 px-2 leading-8">
+										<Label>Value</Label>
+									</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each [...url.searchParams] as [key, value], i (i)}
+									<tr class="grid grid-cols-3">
+										<td class="bg-gray-100 p-0">
+											<input
+												id={`query-key-input-${i}`}
+												class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
+												value={key}
+												on:input={(e) => updateQueryKeyHandler(e, i)}
+											/>
+										</td>
+										<td class="col-span-2 flex items-center p-0">
+											<input
+												class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
+												{value}
+												on:input={(e) => updateQueryValueHandler(e, key, i)}
+											/>
+											<div class="h-full bg-gray-100">
+												<button
+													on:click={() => deleteQuery(key, i)}
+													type="button"
+													class=" mr-1 flex aspect-square h-full items-center justify-center px-2 text-gray-900 hover:bg-red-500 hover:text-white"
+												>
+													<Icon icon="ic:sharp-clear" />
+												</button>
+											</div>
+										</td>
+									</tr>
+								{/each}
+								<tr class="grid grid-cols-3">
+									<td class="p-0">
 										<input
-											id={`query-key-input-${i}`}
 											class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
-											value={key}
-											on:input={(e) => updateQueryKeyHandler(e, i)}
+											placeholder="Key"
+											bind:value={newParam.key}
+											on:input={() => addQueryParam()}
 										/>
 									</td>
-									<td class="col-span-2 flex items-center p-0">
+									<td class="col-span-2 p-0">
 										<input
 											class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
-											{value}
-											on:input={(e) => updateQueryValueHandler(e, key, i)}
+											placeholder="Value"
+											bind:value={newParam.value}
 										/>
-										<div class="h-full bg-gray-100">
-											<button
-												on:click={() => deleteQuery(key, i)}
-												type="button"
-												class=" mr-1 flex aspect-square h-full items-center justify-center px-2 text-gray-900 hover:bg-red-500 hover:text-white"
-											>
-												<Icon icon="tabler:x" />
-											</button>
-										</div>
 									</td>
 								</tr>
-							{/each}
-							<tr class="grid grid-cols-3">
-								<td class="p-0">
-									<input
-										class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
-										bind:value={newParam.key}
-										on:input={(e) => addQueryParam(e)}
-									/>
-								</td>
-								<td class="col-span-2 p-0">
-									<input
-										class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
-										bind:value={newParam.value}
-									/>
-								</td>
-							</tr>
-						</tbody>
-					</table>
+							</tbody>
+						</table>
+					</div>
 				</div>
 
 				<div class="flex">
