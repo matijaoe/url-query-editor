@@ -6,6 +6,6 @@
 
 <style lang="postcss" global>
 	::selection {
-		@apply bg-sky-200;
+		@apply bg-teal-200;
 	}
 </style>

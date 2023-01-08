@@ -3,7 +3,7 @@
 	import Icon from '$lib/components/Icon.svelte'
 	import Label from '$lib/components/Label.svelte'
 	import ValueInput from '$lib/components/ValueInput.svelte'
-	import { getCurrentTabUrl, navigateTo } from '$lib/utils'
+	import { getCurrentTabUrl, navigateTo, copy } from '$lib/utils'
 	import { RadioGroup, RadioGroupLabel, RadioGroupOption } from '@rgossiaux/svelte-headlessui'
 	import { onMount } from 'svelte'
 
@@ -23,10 +23,20 @@
 		updateUrl(url)
 	}
 
+	function copyUrlToClipboard() {
+		if (!url) return
+		copy(url.href)
+	}
+
+	function copySearchParamsToClipboard() {
+		if (!url) return
+		copy(url.search)
+	}
+
 	let initialHref: string | undefined
 	let url: URL | undefined
 
-	const protocols = ['http:', 'https:']
+	let protocols = ['http:', 'https:']
 
 	type Param = {
 		key: string
@@ -36,6 +46,9 @@
 	onMount(async () => {
 		initialHref = import.meta.env.DEV ? window.location.href : await getCurrentTabUrl()
 		setInitialUrl()
+		if (url?.protocol && !protocols.includes(url.protocol)) {
+			protocols = [...protocols, url.protocol]
+		}
 	})
 
 	function updateUrl(_url: URL) {
@@ -113,6 +126,14 @@
 		}
 	}
 
+	function focusQueryInputByIndex(index: number, type: 'key' | 'value') {
+		setTimeout(() => {
+			if (!url) return
+			const el = document.querySelector<HTMLInputElement>(`#query-${type}-input-${index}`)
+			el?.focus()
+		}, 0)
+	}
+
 	function addQueryParam() {
 		if (!url) return
 		if (!newParam.key) return
@@ -123,13 +144,7 @@
 
 		updateUrl(url)
 
-		setTimeout(() => {
-			if (!url) return
-			const el = document.querySelector<HTMLInputElement>(
-				`#query-key-input-${Array.from(url.searchParams).length - 1}`
-			)
-			el?.focus()
-		}, 0)
+		focusQueryInputByIndex(Array.from(url.searchParams).length - 1, 'key')
 	}
 
 	function deleteQuery(key: string, index: number) {
@@ -143,6 +158,13 @@
 		updateUrl(url)
 	}
 
+	function duplicateQuery(key: string) {
+		if (!url) return
+		url.searchParams.append(key, '')
+		focusQueryInputByIndex(Array.from(url.searchParams).length - 1, 'value')
+		updateUrl(url)
+	}
+
 	let newParam: Param = {
 		key: '',
 		value: '',
@@ -152,6 +174,9 @@
 		newParam.key = ''
 		newParam.value = ''
 	}
+
+	// TODO: strange bugs when pressing two keys at the same time on the new param input
+	// TODO: handle invalid url
 </script>
 
 <main>
@@ -159,12 +184,12 @@
 		{#if url}
 			<form on:submit|preventDefault={navigateToBuiltUrl}>
 				<textarea
-					rows="2"
+					rows="3"
 					bind:value={url.href}
-					class="input-borders min-h-[68px] w-full break-all bg-gray-100 p-2 font-mono"
+					class="input-borders min-h-[68px] w-full break-all bg-gray-100 p-3 font-mono"
 				/>
 
-				<div class="space-y-1 p-3">
+				<div class="space-y-1 px-3 pt-1 pb-3">
 					<RadioGroup
 						value={url.protocol}
 						on:change={handleProtocolChange}
@@ -177,8 +202,9 @@
 							{#each protocols as protocol}
 								<RadioGroupOption bind:value={protocol} let:checked>
 									<p
-										class="cursor-pointer border border-transparent bg-gray-100 px-3 leading-8 hover:bg-sky-100"
+										class="cursor-pointer border border-transparent bg-gray-100 px-3 leading-8 hover:bg-gray-200"
 										class:checked
+										data-protocol={protocol}
 									>
 										{protocol}
 									</p>
@@ -199,76 +225,118 @@
 
 					<div class="pt-2">
 						<div class="flex items-center justify-between gap-2">
-							<Label>Query Params</Label>
+							<Label>Search Params</Label>
 
 							<div class="flex justify-end gap-1">
-								{#if Array.from(url.searchParams ?? []).length > 0}
-									<FieldButton on:click={deleteAllSearchParams} icon="ic:sharp-delete-sweep">
+								{#if url && Array.from(url.searchParams ?? []).length > 0}
+									<FieldButton
+										on:click={copySearchParamsToClipboard}
+										icon="ic:outline-copy-all"
+										title="Copy search params"
+									>
+										Copy all
+									</FieldButton>
+
+									<FieldButton
+										on:click={deleteAllSearchParams}
+										icon="ic:outline-clear-all"
+										title="Clear all"
+									>
 										Clear
 									</FieldButton>
 								{/if}
 
-								<FieldButton on:click={sortQueryParams} icon="ic:sharp-sort-by-alpha">
+								<FieldButton
+									on:click={sortQueryParams}
+									icon="ic:outline-sort-by-alpha"
+									title="Sort alphabetically"
+								>
 									Sort
 								</FieldButton>
 							</div>
 						</div>
 
-						<table>
+						<table class="border-collapse border border-gray-200">
 							<thead>
-								<tr class="grid grid-cols-3 items-center text-left">
-									<th class="bg-gray-100 px-2 leading-8">
-										<Label>Key</Label>
+								<tr class="grid grid-cols-3 text-left">
+									<th>
+										<div class="px-2">
+											<Label>Key</Label>
+										</div>
 									</th>
-									<th class="col-span-2 bg-gray-100 px-2 leading-8">
-										<Label>Value</Label>
+									<th class="col-span-2">
+										<div class="px-2">
+											<Label>Value</Label>
+										</div>
 									</th>
 								</tr>
 							</thead>
 							<tbody>
 								{#each [...url.searchParams] as [key, value], i (i)}
 									<tr class="grid grid-cols-3">
-										<td class="bg-gray-100 p-0">
+										<td class="flex items-center">
 											<input
 												id={`query-key-input-${i}`}
-												class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
+												class="input-borders col-span-2 w-full bg-gray-100 px-2 font-mono leading-8"
 												value={key}
 												on:input={(e) => updateQueryKeyHandler(e, i)}
 											/>
 										</td>
-										<td class="col-span-2 flex items-center p-0">
+										<td class="col-span-2 flex">
 											<input
-												class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
+												id={`query-value-input-${i}`}
+												class="input-borders col-span-2 w-full bg-gray-100 px-2 font-mono leading-8"
 												{value}
 												on:input={(e) => updateQueryValueHandler(e, key, i)}
 											/>
-											<div class="h-full bg-gray-100">
+											<div class="mr-2 flex">
+												<button
+													on:click={() => duplicateQuery(key)}
+													type="button"
+													title="Duplicate"
+													class="query-param-btn primary"
+												>
+													<Icon icon="ic:outline-content-copy" />
+												</button>
 												<button
 													on:click={() => deleteQuery(key, i)}
 													type="button"
-													class=" mr-1 flex aspect-square h-full items-center justify-center px-2 text-gray-900 hover:bg-red-500 hover:text-white"
+													title="Remove"
+													class="query-param-btn danger "
 												>
-													<Icon icon="ic:sharp-clear" />
+													<Icon icon="ic:outline-clear" />
 												</button>
 											</div>
 										</td>
 									</tr>
 								{/each}
 								<tr class="grid grid-cols-3">
-									<td class="p-0">
+									<td class="flex items-center">
 										<input
-											class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
+											class="input-borders col-span-2 w-full bg-gray-100 px-2 font-mono leading-8 placeholder:lowercase"
 											placeholder="Key"
 											bind:value={newParam.key}
 											on:input={() => addQueryParam()}
 										/>
 									</td>
-									<td class="col-span-2 p-0">
+									<td class="col-span-2 flex">
 										<input
-											class="input-borders col-span-2 w-full rounded-none bg-gray-100 px-2 font-mono leading-8"
+											class="input-borders col-span-2 w-full bg-gray-100 px-2 font-mono leading-8 placeholder:lowercase"
 											placeholder="Value"
 											bind:value={newParam.value}
 										/>
+										{#if newParam.value}
+											<div class="mr-1 flex">
+												<button
+													on:click={clearNewParam}
+													type="button"
+													title="Remove"
+													class="query-param-btn danger text-gray-900 "
+												>
+													<Icon icon="ic:outline-clear" />
+												</button>
+											</div>
+										{/if}
 									</td>
 								</tr>
 							</tbody>
@@ -278,18 +346,33 @@
 
 				<div class="flex">
 					<button
-						class="flex-2 w-full bg-sky-500 py-3 px-8 text-sm font-semibold uppercase text-white"
+						class="flex flex-1 items-center justify-center gap-2 bg-teal-500 py-3 px-6 pr-6 text-sm font-semibold uppercase text-white"
 						type="submit"
+						title="Load page with new url"
 					>
-						Load page
+						Go to url
+						<Icon icon="ic:outline-open-in-browser" class="text-lg" />
 					</button>
 					<button
-						class="w-full flex-1 bg-gray-800 py-3 px-8 text-sm font-semibold uppercase text-gray-50"
-						on:click={setInitialUrl}
+						class="flex items-center justify-center gap-2 bg-teal-700 py-3 px-6 text-sm font-semibold uppercase text-gray-50"
+						on:click={copyUrlToClipboard}
 						type="button"
+						title="Copy url to clipboard"
 					>
-						Reset
+						Copy
+						<Icon icon="ic:outline-link" class="text-lg" />
 					</button>
+					{#if url?.href !== initialHref}
+						<button
+							class="flex items-center justify-center gap-2 bg-teal-900 py-3 px-6 text-sm font-semibold uppercase text-gray-50"
+							on:click={setInitialUrl}
+							type="button"
+							title="Reset url"
+						>
+							Reset
+							<Icon icon="ic:outline-restart-alt" class="text-lg" />
+						</button>
+					{/if}
 				</div>
 			</form>
 		{:else}
@@ -302,17 +385,43 @@
 
 <style lang="postcss">
 	#popup-window {
-		width: 420px;
-		max-height: 600px;
-		min-height: 150px;
+		width: 480px;
+		max-height: 1200px;
+		min-height: 300px;
 		@apply resize-y overflow-auto;
 	}
 
 	.checked {
-		@apply !bg-sky-500 text-white;
+		@apply text-white;
+
+		@apply !bg-orange-500;
+
+		&[data-protocol='http:'] {
+			@apply !bg-red-500;
+		}
+
+		&[data-protocol='https:'] {
+			@apply !bg-teal-500;
+		}
 	}
 
 	:global(.input-borders) {
-		@apply border border-transparent invalid:!border-red-500 invalid:bg-red-50 read-only:!bg-gray-100 focus:border-sky-500 focus:bg-gray-100 focus:outline-none;
+		@apply border border-transparent invalid:!border-red-500 invalid:!bg-red-50 read-only:!bg-gray-100 focus:border-teal-500 focus:bg-gray-100 focus:outline-none;
+	}
+
+	:is(th, td) {
+		@apply border border-gray-200 bg-gray-100 p-0;
+	}
+
+	.query-param-btn {
+		@apply grid aspect-square place-content-center px-2 text-gray-900 hover:text-white focus:text-white focus:outline-none;
+
+		&.danger {
+			@apply hover:bg-red-500  focus:bg-red-500;
+		}
+
+		&.primary {
+			@apply hover:bg-teal-500  focus:bg-teal-500;
+		}
 	}
 </style>

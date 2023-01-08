@@ -6,3 +6,7 @@ export async function getCurrentTabUrl() {
 export function navigateTo(url: string) {
 	chrome.tabs?.update({ url })
 }
+
+export function copy(text: string) {
+	navigator.clipboard.writeText(text)
+}

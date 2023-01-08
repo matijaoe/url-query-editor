@@ -13,5 +13,5 @@
 	use:typeAction
 	{readonly}
 	bind:value
-	class="px-2 leading-8 font-mono bg-gray-100 input-borders"
+	class="input-borders bg-gray-100 px-2 font-mono leading-8"
 />
