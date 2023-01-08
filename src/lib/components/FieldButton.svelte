@@ -5,7 +5,7 @@
 </script>
 
 <button
-	class="flex items-center justify-center gap-1 bg-gray-100 px-1 py-1 text-xs font-medium uppercase hover:bg-gray-200"
+	class="flex items-center justify-center gap-1 bg-gray-100 px-1 py-1 text-xs font-medium uppercase hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-teal-500"
 	type="button"
 	on:click
 	{...$$restProps}

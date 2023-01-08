@@ -194,16 +194,16 @@
 					<RadioGroup
 						value={url.protocol}
 						on:change={handleProtocolChange}
-						class="grid grid-cols-[80px_1fr] items-center gap-x-4 gap-y-1 "
+						class="grid grid-cols-[80px_1fr] items-center gap-x-4 gap-y-1 focus:outline-none"
 					>
 						<RadioGroupLabel>
 							<Label>Protocol</Label>
 						</RadioGroupLabel>
 						<div class="flex items-center font-mono">
 							{#each protocols as protocol}
-								<RadioGroupOption bind:value={protocol} let:checked>
+								<RadioGroupOption bind:value={protocol} let:checked class="focus:outline-teal-400">
 									<p
-										class="cursor-pointer border border-transparent bg-gray-100 px-3 leading-8 hover:bg-gray-200"
+										class="cursor-pointer border border-transparent bg-gray-100 px-3 leading-8 hover:bg-gray-200 focus:outline-none"
 										class:checked
 										data-protocol={protocol}
 									>
@@ -314,7 +314,7 @@
 								<tr class="grid grid-cols-3">
 									<td class="flex items-center">
 										<input
-											class="input-borders col-span-2 w-full bg-gray-100 px-2 font-mono leading-8 placeholder:lowercase"
+											class="input-borders col-span-2 w-full bg-gray-100 px-2 font-mono leading-8 placeholder:lowercase placeholder:text-gray-400"
 											placeholder="Key"
 											bind:value={newParam.key}
 											on:input={() => addQueryParam()}
@@ -322,7 +322,7 @@
 									</td>
 									<td class="col-span-2 flex">
 										<input
-											class="input-borders col-span-2 w-full bg-gray-100 px-2 font-mono leading-8 placeholder:lowercase"
+											class="input-borders col-span-2 w-full bg-gray-100 px-2 font-mono leading-8 placeholder:lowercase placeholder:text-gray-400"
 											placeholder="Value"
 											bind:value={newParam.value}
 										/>
@@ -347,7 +347,7 @@
 
 				<div class="flex">
 					<button
-						class="flex flex-1 items-center justify-center gap-2 bg-teal-500 py-3 px-6 pr-6 text-sm font-semibold uppercase text-white"
+						class="flex flex-1 items-center justify-center gap-2 bg-teal-500 py-3 px-6 pr-6 text-sm font-semibold uppercase text-white focus:outline-teal-400"
 						type="submit"
 						title="Reload page with new URL applied"
 					>
@@ -355,7 +355,7 @@
 						<Icon icon="ic:outline-open-in-browser" class="text-lg" />
 					</button>
 					<button
-						class="flex items-center justify-center gap-2 bg-teal-700 py-3 px-6 text-sm font-semibold uppercase text-gray-50"
+						class="flex items-center justify-center gap-2 bg-teal-700 py-3 px-6 text-sm font-semibold uppercase text-gray-50 focus:outline-teal-400"
 						on:click={copyUrlToClipboard}
 						type="button"
 						title="Copy URL to clipboard"
@@ -365,7 +365,7 @@
 					</button>
 					{#if url?.href !== initialHref}
 						<button
-							class="flex items-center justify-center gap-2 bg-teal-900 py-3 px-6 text-sm font-semibold uppercase text-gray-50"
+							class="flex items-center justify-center gap-2 bg-teal-900 py-3 px-6 text-sm font-semibold uppercase text-gray-50 focus:outline-teal-400"
 							on:click={setInitialUrl}
 							type="button"
 							title="Reset url"
