@@ -3,9 +3,23 @@
 	import Icon from '$lib/components/Icon.svelte'
 	import Label from '$lib/components/Label.svelte'
 	import ValueInput from '$lib/components/ValueInput.svelte'
+	import type { KeyValueTuple, Param } from '$lib/models'
 	import { getCurrentTabUrl, navigateTo, copy } from '$lib/utils'
 	import { RadioGroup, RadioGroupLabel, RadioGroupOption } from '@rgossiaux/svelte-headlessui'
 	import { onMount } from 'svelte'
+
+	let initialHref: string | undefined
+	let url: URL | undefined
+
+	let protocols = ['http:', 'https:']
+
+	onMount(async () => {
+		initialHref = import.meta.env.DEV ? window.location.href : await getCurrentTabUrl()
+		setInitialUrl()
+		if (url?.protocol && !protocols.includes(url.protocol)) {
+			protocols = [...protocols, url.protocol]
+		}
+	})
 
 	function navigateToBuiltUrl() {
 		if (!url) return
@@ -33,26 +47,8 @@
 		copy(url.search)
 	}
 
-	let initialHref: string | undefined
-	let url: URL | undefined
-
-	let protocols = ['http:', 'https:']
-
-	type Param = {
-		key: string
-		value: string
-	}
-
-	onMount(async () => {
-		initialHref = import.meta.env.DEV ? window.location.href : await getCurrentTabUrl()
-		setInitialUrl()
-		if (url?.protocol && !protocols.includes(url.protocol)) {
-			protocols = [...protocols, url.protocol]
-		}
-	})
-
-	function updateUrl(_url: URL) {
-		url = new URL(_url.href)
+	function updateUrl({ href }: URL) {
+		url = new URL(href)
 	}
 
 	function updateQueryKey(key: string, index: number) {
@@ -70,8 +66,6 @@
 
 		updateUrl(url)
 	}
-
-	type KeyValueTuple = [string, string]
 
 	function setQueryParameter(key: string, value: string, index: number) {
 		if (!url) return
@@ -112,6 +106,34 @@
 	function updateQueryValueHandler(e: Event, key: string, index: number) {
 		const value = (e.target as HTMLInputElement).value
 		setQueryParameter(key, value, index)
+	}
+
+	$: pathnameArray = url?.pathname.split('/').filter(Boolean) ?? []
+
+	function updatePathname(e: Event, index: number) {
+		if (!url) return
+
+		const updatedParam = (e.target as HTMLInputElement).value
+		pathnameArray[index] = updatedParam
+
+		url.pathname = pathnameArray.join('/')
+	}
+
+	function deletePath(e: Event, index: number) {
+		if (!url) return
+
+		pathnameArray.splice(index, 1)
+
+		url.pathname = pathnameArray.join('/')
+	}
+
+	function addPath(e: Event) {
+		if (!url) return
+
+		const newParam = (e.target as HTMLInputElement).value
+		pathnameArray.push(newParam)
+
+		url.pathname = pathnameArray.join('/')
 	}
 
 	function handleProtocolChange(e: Event & { detail: string }) {
@@ -175,8 +197,20 @@
 		newParam.value = ''
 	}
 
+	function setCaret(e: Event) {
+		const el = e.target as HTMLTextAreaElement
+		const caretPos = el.selectionStart
+		const textLength = el.value.length
+
+		if (caretPos <= textLength) return
+
+		el.selectionStart = el.selectionEnd = el.value.length
+	}
+
 	// TODO: strange bugs when pressing two keys at the same time on the new param input
 	// TODO: handle invalid url
+	// autor esize textarea
+	// on textarea click set cursor to end (if not clicked inbetween text)
 </script>
 
 <main>
@@ -185,8 +219,9 @@
 			<form on:submit|preventDefault={navigateToBuiltUrl}>
 				<textarea
 					placeholder="Full URL"
-					rows="1"
+					rows="3"
 					bind:value={url.href}
+					on:click={setCaret}
 					class="input-borders min-h-[68px] w-full break-all bg-gray-100 p-3 font-mono"
 				/>
 
@@ -224,15 +259,24 @@
 						{/if}
 					</div>
 
-					<!-- TODO: implement pathname -->
-					<Label>Pathname</Label>
-					<dir class="flex gap-1">
-						{#each url?.pathname.split('/').filter(Boolean) as path}
-							<div class="border border-transparent bg-gray-100 px-2 leading-8">
-								{path}
-							</div>
-						{/each}
-					</dir>
+					<!-- TODO: wip -->
+					<div>
+						<Label>Pathname</Label>
+						<div class="inline-flex gap-1">
+							<dir class="m-0 grid grid-cols-3 gap-1 pl-0">
+								{#each pathnameArray as path, i}
+									<ValueInput value={path} on:input={(e) => updatePathname(e, i)} />
+									<button on:click={(e) => deletePath(e, i)}>
+										<Icon icon="ic:outline-clear" />
+									</button>
+								{/each}
+								<!-- <ValueInput on:input={(e) => addPath(e)} /> -->
+							</dir>
+							<!-- <button class="aspect-square bg-gray-100 p-2">
+								<Icon icon="ic:outline-add" />
+							</button> -->
+						</div>
+					</div>
 
 					<div class="pt-2">
 						<div class="flex items-center justify-between gap-2">

@@ -13,5 +13,6 @@
 	use:typeAction
 	{readonly}
 	bind:value
+	on:input
 	class="input-borders bg-gray-100 px-2 font-mono leading-8"
 />
