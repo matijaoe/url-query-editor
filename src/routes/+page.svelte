@@ -224,6 +224,16 @@
 						{/if}
 					</div>
 
+					<!-- TODO: implement pathname -->
+					<Label>Pathname</Label>
+					<dir class="flex gap-1">
+						{#each url?.pathname.split('/').filter(Boolean) as path}
+							<div class="border border-transparent bg-gray-100 px-2 leading-8">
+								{path}
+							</div>
+						{/each}
+					</dir>
+
 					<div class="pt-2">
 						<div class="flex items-center justify-between gap-2">
 							<Label>Search Params</Label>
