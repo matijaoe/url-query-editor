@@ -21,6 +21,13 @@
 		}
 	})
 
+	const focusInputById = (id: string) => {
+		setTimeout(() => {
+			const el = document.querySelector<HTMLInputElement>(`#${id}`)
+			el?.focus()
+		}, 0)
+	}
+
 	function navigateToBuiltUrl() {
 		if (!url) return
 		navigateTo(url.href ?? '')
@@ -131,9 +138,15 @@
 		if (!url) return
 
 		const newParam = (e.target as HTMLInputElement).value
+
 		pathnameArray.push(newParam)
 
 		url.pathname = pathnameArray.join('/')
+
+		// TODO: why does it still not clear
+		clearNewPathParam()
+
+		focusPathParamInputByIndex(pathnameArray.length - 1)
 	}
 
 	function handleProtocolChange(e: Event & { detail: string }) {
@@ -149,11 +162,7 @@
 	}
 
 	function focusQueryInputByIndex(index: number, type: 'key' | 'value') {
-		setTimeout(() => {
-			if (!url) return
-			const el = document.querySelector<HTMLInputElement>(`#query-${type}-input-${index}`)
-			el?.focus()
-		}, 0)
+		focusInputById(`query-${type}-input-${index}`)
 	}
 
 	function addQueryParam() {
@@ -191,10 +200,18 @@
 		key: '',
 		value: '',
 	}
-
 	function clearNewParam() {
 		newParam.key = ''
 		newParam.value = ''
+	}
+
+	let newPathParam = ''
+	function clearNewPathParam() {
+		newPathParam = ''
+	}
+
+	function focusPathParamInputByIndex(index: number) {
+		focusInputById(`path-param-input-${index}`)
 	}
 
 	function setCaret(e: Event) {
@@ -209,8 +226,8 @@
 
 	// TODO: strange bugs when pressing two keys at the same time on the new param input
 	// TODO: handle invalid url
-	// autor esize textarea
-	// on textarea click set cursor to end (if not clicked inbetween text)
+	// auto-resize textarea
+	// on textarea click set cursor to end (if not clicked in-between text)
 </script>
 
 <main>
@@ -263,18 +280,26 @@
 					<div>
 						<Label>Pathname</Label>
 						<div class="inline-flex gap-1">
-							<dir class="m-0 grid grid-cols-3 gap-1 pl-0">
-								{#each pathnameArray as path, i}
-									<ValueInput value={path} on:input={(e) => updatePathname(e, i)} />
-									<button on:click={(e) => deletePath(e, i)}>
-										<Icon icon="ic:outline-clear" />
-									</button>
-								{/each}
-								<!-- <ValueInput on:input={(e) => addPath(e)} /> -->
+							<dir class="m-0 flex flex-wrap gap-1 pl-0">
+								{#if pathnameArray.length > 0}
+									{#each pathnameArray as path, i}
+										<div>
+											<ValueInput
+												id={`path-param-input-${i}`}
+												value={path}
+												on:input={(e) => updatePathname(e, i)}
+											/>
+											<!-- <span class="" contenteditable on:input={(e) => onInput(e, i)}>{path}</span> -->
+											<button on:click={(e) => deletePath(e, i)} class="px-2">
+												<Icon icon="ic:outline-clear" />
+											</button>
+										</div>
+									{/each}
+								{/if}
+								<div>
+									<ValueInput value={newPathParam} on:input={(e) => addPath(e)} />
+								</div>
 							</dir>
-							<!-- <button class="aspect-square bg-gray-100 p-2">
-								<Icon icon="ic:outline-add" />
-							</button> -->
 						</div>
 					</div>
 
