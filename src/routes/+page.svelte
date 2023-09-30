@@ -4,7 +4,7 @@
 	import Label from '$lib/components/Label.svelte'
 	import ValueInput from '$lib/components/ValueInput.svelte'
 	import type { KeyValueTuple, Param } from '$lib/models'
-	import { getCurrentTabUrl, navigateTo, copy } from '$lib/utils'
+	import { copy, getCurrentTabUrl, navigateTo } from '$lib/utils'
 	import { RadioGroup, RadioGroupLabel, RadioGroupOption } from '@rgossiaux/svelte-headlessui'
 	import { onMount } from 'svelte'
 
@@ -35,6 +35,11 @@
 		if (!url) return
 		url?.searchParams.sort()
 		updateUrl(url)
+	}
+
+	function updateUrlTextarea(e: Event) {
+		const value = (e.target as HTMLTextAreaElement).value
+		updateUrl(new URL(value))
 	}
 
 	function copyUrlToClipboard() {
@@ -108,34 +113,6 @@
 		setQueryParameter(key, value, index)
 	}
 
-	$: pathnameArray = url?.pathname.split('/').filter(Boolean) ?? []
-
-	function updatePathname(e: Event, index: number) {
-		if (!url) return
-
-		const updatedParam = (e.target as HTMLInputElement).value
-		pathnameArray[index] = updatedParam
-
-		url.pathname = pathnameArray.join('/')
-	}
-
-	function deletePath(e: Event, index: number) {
-		if (!url) return
-
-		pathnameArray.splice(index, 1)
-
-		url.pathname = pathnameArray.join('/')
-	}
-
-	function addPath(e: Event) {
-		if (!url) return
-
-		const newParam = (e.target as HTMLInputElement).value
-		pathnameArray.push(newParam)
-
-		url.pathname = pathnameArray.join('/')
-	}
-
 	function handleProtocolChange(e: Event & { detail: string }) {
 		if (!url) return
 		url.protocol = e.detail
@@ -206,11 +183,6 @@
 
 		el.selectionStart = el.selectionEnd = el.value.length
 	}
-
-	// TODO: strange bugs when pressing two keys at the same time on the new param input
-	// TODO: handle invalid url
-	// autor esize textarea
-	// on textarea click set cursor to end (if not clicked inbetween text)
 </script>
 
 <main>
@@ -220,9 +192,10 @@
 				<textarea
 					placeholder="Full URL"
 					rows="3"
-					bind:value={url.href}
+					value={url.href}
 					on:click={setCaret}
-					class="input-borders min-h-[68px] w-full break-all bg-gray-100 p-3 font-mono"
+					on:input={updateUrlTextarea}
+					class="input-borders textarea min-h-[68px] w-full break-all bg-gray-100 p-3 font-mono"
 				/>
 
 				<div class="space-y-1 px-3 pt-1 pb-3">
@@ -257,25 +230,6 @@
 							<Label>Port</Label>
 							<ValueInput type="number" min="1" max="65535" bind:value={url.port} />
 						{/if}
-					</div>
-
-					<!-- TODO: wip -->
-					<div>
-						<Label>Pathname</Label>
-						<div class="inline-flex gap-1">
-							<dir class="m-0 grid grid-cols-3 gap-1 pl-0">
-								{#each pathnameArray as path, i}
-									<ValueInput value={path} on:input={(e) => updatePathname(e, i)} />
-									<button on:click={(e) => deletePath(e, i)}>
-										<Icon icon="ic:outline-clear" />
-									</button>
-								{/each}
-								<!-- <ValueInput on:input={(e) => addPath(e)} /> -->
-							</dir>
-							<!-- <button class="aspect-square bg-gray-100 p-2">
-								<Icon icon="ic:outline-add" />
-							</button> -->
-						</div>
 					</div>
 
 					<div class="pt-2">
@@ -478,5 +432,9 @@
 		&.primary {
 			@apply hover:bg-teal-500  focus:bg-teal-500;
 		}
+	}
+
+	.textarea {
+		form-sizing: normal;
 	}
 </style>
