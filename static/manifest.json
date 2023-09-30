@@ -1,6 +1,6 @@
 {
-	"name": "URL Editor",
-	"version": "0.0.1",
+	"name": "URL Query Editor",
+	"version": "1.0.0",
 	"manifest_version": 3,
 	"permissions": ["activeTab"],
 	"options_page": "options.html",
